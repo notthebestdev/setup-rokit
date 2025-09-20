@@ -1,0 +1,53 @@
+name: 'setup-rokit'
+description: 'Install Rokit, the next-generation toolchain manager for Roblox projects.'
+author: 'notthebestdev'
+branding:
+  icon: 'package'
+  color: 'red'
+
+inputs:
+  version:
+    description: 'Rokit version to install (use a tag name like v1.1.1, or "latest" for the newest release)'
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Detect platform
+      id: platform
+      shell: bash
+      run: |
+        unameOut="$(uname -s)"
+        case "${unameOut}" in
+            Linux*)     platform=linux;;
+            Darwin*)    platform=macos;;
+            CYGWIN*|MINGW*|MSYS*)    platform=windows;;
+            *)          platform="unknown"
+        esac
+        echo "platform=$platform" >> $GITHUB_OUTPUT
+
+    - name: Set up Rokit (Linux/macOS)
+      if: steps.platform.outputs.platform != 'windows'
+      shell: bash
+      run: |
+        version="${{ inputs.version }}"
+        if [ "$version" = "latest" ]; then
+          version=$(curl -s https://api.github.com/repos/rojo-rbx/rokit/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
+        fi
+        curl -sSf https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.sh | bash -s "$version"
+        # the installer does not add rokit to path for some reason
+        echo "$PWD" >> "$GITHUB_PATH"
+
+    - name: Set up Rokit (Windows)
+      if: steps.platform.outputs.platform == 'windows'
+      shell: pwsh
+      run: |
+        $version = "${{ inputs.version }}"
+        if ($version -eq "latest") {
+          $release = Invoke-RestMethod "https://api.github.com/repos/rojo-rbx/rokit/releases/latest"
+          $version = $release.tag_name
+        }
+        Invoke-RestMethod "https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.ps1" | Invoke-Expression
+        # again, it dosent install it to path
+        Add-Content -Path $env:GITHUB_PATH -Value "$pwd\rokit"
