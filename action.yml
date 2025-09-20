@@ -36,6 +36,7 @@ runs:
           version=$(curl -s https://api.github.com/repos/rojo-rbx/rokit/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
         fi
         version="${version#v}"
+        echo "DEBUG: version being passed to install.sh is '$version'"
         curl -sSf https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.sh | bash -s "$version"
         # the installer does not add rokit to path for some reason
         echo "$PWD" >> "$GITHUB_PATH"
